@@ -27,10 +27,10 @@ import copy
 data_transforms = {
 	'train': transforms.Compose([
 		transforms.RandomResizedCrop(224),
-		transforms.RandomHorizonalFlip(),
+		transforms.RandomHorizontalFlip(),
 		transforms.ToTensor(),
 		transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
-	'val'L transforms.Compose([
+	'val': transforms.Compose([
 		transforms.Resize(256),
 		transforms.CenterCrop(224),
 		transforms.ToTensor(),
@@ -38,7 +38,7 @@ data_transforms = {
 }
 
 data_dir = '../../datasets/hymenoptera_data'
-image_datasets = {x: datasets.ImageFloder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val']}
+image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ['train', 'val']}
 dataloaders = {x: torch.utils.data.DataLoader(image_datasets[x], batch_size=4, shuffle=True, num_workers=4) for x in ['train', 'val']}
 dataset_sizes = {x: len(image_datasets[x]) for x in ['train', 'val']}
 class_names = image_datasets['train'].classes
@@ -59,9 +59,9 @@ def imshow(inp, title=None):
 
 inputs, classes = next(iter(dataloaders['train']))
 
-out = torchvision.uitls.make_grid(inputs)
+out = torchvision.utils.make_grid(inputs)
 
-imshow(out, titile=[class_names[x] for x in classes])
+imshow(out, title=[class_names[x] for x in classes])
 
 #train
 def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
@@ -73,7 +73,7 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 		print('epoch {}/{}'.format(epoch, num_epochs - 1))
 		print('-' * 11)
 		for phase in ['train', 'val']:
-			if phase = 'train':
+			if phase == 'train':
 				model.train()
 			else:
 				model.eval()
@@ -108,9 +108,9 @@ def train_model(model, criterion, optimizer, scheduler, num_epochs=25):
 
 		print()
 
-	time_epalsed = time.time() - since
+	time_elapsed = time.time() - since
 	print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
-	print('best val acc: {:4f'.format(best_acc))
+	print('best val acc: {:4f}'.format(best_acc))
 
 	model.load_state_dict(best_model_wts)
 
