@@ -26,7 +26,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 imsize = 512
 
 loader = transforms.Compose([
-	transforms.Resize(imsize),
+	transforms.Resize((imsize, imsize)),
 	transforms.ToTensor()])
 
 def image_loader(image_name):
@@ -36,6 +36,9 @@ def image_loader(image_name):
 
 style_img = image_loader('../../datasets/neural_transfer/picasso.jpg')
 content_img = image_loader('../../datasets/neural_transfer/yan.jpg')
+
+print(style_img.size(), content_img.size())
+
 
 assert style_img.size() == content_img.size()
 
