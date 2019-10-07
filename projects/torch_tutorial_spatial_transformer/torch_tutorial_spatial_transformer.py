@@ -8,7 +8,7 @@
 from __future__ import print_function
 
 import numpy as np
-import matplotlib.pylot as plt
+import matplotlib.pyplot as plt
 
 import torch
 import torchvision
@@ -22,7 +22,7 @@ plt.ion()
 
 root = '../../datasets'
 
-device = torch.device('cuda' if torch.cuda.isavailable() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 train_loader = torch.utils.data.DataLoader(
 	datasets.MNIST(root=root, train=True, download=True,
@@ -50,11 +50,11 @@ class Net(nn.Module):
 
 		self.localization = nn.Sequential(
 			nn.Conv2d(1, 8, kernel_size=7),
-			nn.MaxPool2d(2, strides=2),
-			nn.RuLU(True),
+			nn.MaxPool2d(2, stride=2),
+			nn.ReLU(True),
 			nn.Conv2d(8, 10, kernel_size=5),
-			nn.MaxPool2d(2, strides=2),
-			nn.RuLU(True))
+			nn.MaxPool2d(2, stride=2),
+			nn.ReLU(True))
 
 		self.fc_loc = nn.Sequential(
 			nn.Linear(10 * 3 * 3, 32),
@@ -68,7 +68,7 @@ class Net(nn.Module):
 		xs = self.localization(x)
 		xs = xs.view(-1, 10 * 3 * 3)
 		theta = self.fc_loc(xs)
-		theta = tehta.view(-1, 2, 3)
+		theta = theta.view(-1, 2, 3)
 		grid = F.affine_grid(theta, x.size())
 		x = F.grid_sample(x, grid)
 		return x
