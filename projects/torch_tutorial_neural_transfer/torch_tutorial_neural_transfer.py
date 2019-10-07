@@ -35,7 +35,7 @@ def image_loader(image_name):
 	return image.to(device, torch.float)
 
 style_img = image_loader('../../datasets/neural_transfer/picasso.jpg')
-content_img = image_loader('../../datasets/neural_transfer/dancing.jpg')
+content_img = image_loader('../../datasets/neural_transfer/yan.jpg')
 
 assert style_img.size() == content_img.size()
 
