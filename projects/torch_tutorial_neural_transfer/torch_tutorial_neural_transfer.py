@@ -34,8 +34,8 @@ def image_loader(image_name):
 	image = loader(image).unsqueeze(0)
 	return image.to(device, torch.float)
 
-style_img = image_loader('../../datasets/neural_transfer/picasso.jpg')
-content_img = image_loader('../../datasets/neural_transfer/yan.jpg')
+style_img = image_loader('../../datasets/neural_transfer/scream.jpg')
+content_img = image_loader('../../datasets/neural_transfer/yi.jpg')
 
 print(style_img.size(), content_img.size())
 
@@ -205,7 +205,7 @@ output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std, 
 
 plt.figure()
 imshow(output, title='output image')
-plt.savefig('outcomes/outcome.png')
+plt.savefig('outcomes/outcome2.png')
 
 plt.ioff()
 plt.show()
