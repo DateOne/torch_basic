@@ -202,6 +202,7 @@ output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std, 
 
 plt.figure()
 imshow(output, title='output image')
+plt.savefig('outcomes/outcome.png')
 
 plt.ioff()
 plt.show()
