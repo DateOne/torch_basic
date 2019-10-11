@@ -33,13 +33,15 @@ parser.add_argument(
 	help='number of epochs',
 	default=100)
 parser.add_argument(
-	'-i', 'iterations', type=int,
+	'-i', '--iterations', type=int,
 	help='number of iterations',
 	default=100)
 parser.add_argument(
 	'-lr', '--learning_rate', type=float,
 	help='learning rate',
 	default=0.001)
+
+parser = parser.parse_args()
 
 root = os.path.join('../../datasets', 'omniglot')
 exp_root = 'exp'
@@ -64,8 +66,8 @@ transform=transforms.ToTensor()
 background_dataset = torchvision.datasets.Omniglot(root='../../datasets/torch_omniglot', background=True, transform=transform, download=True)
 evaluation_dataset = torchvision.datasets.Omniglot(root='../../datasets/torch_omniglot', background=False, transform=transform, download=True)
 
-background_dset_parameters = {num_samples: 19280, num_classes: 964, num_sample_per_class: 20}
-evaluation_dset_parameters = {num_samples: 13180, num_classes: 659, num_sample_per_class: 20}
+background_dset_parameters = {'num_samples': 19280, 'num_classes': 964, 'num_sample_per_class': 20}
+evaluation_dset_parameters = {'num_samples': 13180, 'num_classes': 659, 'num_sample_per_class': 20}
 
 class FSLBatchSampler(object):
 	'''
@@ -83,12 +85,12 @@ class FSLBatchSampler(object):
 			self.dset_parameters = evaluation_dset_parameters
 	def __iter__(self):
 		batch = []
-		class_idcs = torch.randperm(self.dset_parameters[num_classes])[0 : self.num_classes]
+		class_idcs = torch.randperm(self.dset_parameters['num_classes'])[0 : self.num_classes]
 		for class_idx in class_idcs:
-			sample_idcs = torch.randperm(self.dset_parameters[num_sample_per_class])[0 : self.num_samples]
+			sample_idcs = torch.randperm(self.dset_parameters['num_sample_per_class'])[0 : self.num_samples]
 			for sample_idx in sample_idcs:
-				batch.append(self.dset_parameters[num_sample_per_class] * class_idx + sample_idx)
-		return iter(batch[torch.randperm(len(batch))])
+				batch.append(self.dset_parameters['num_sample_per_class'] * class_idx + sample_idx)
+		return iter(batch)
 	def __len__(self):
 		return self.iterations
 
@@ -126,7 +128,7 @@ class ProtoNet(nn.Module):
 			conv_block(hid_dim, z_dim))
 	def forward(self, x):
 		x = self.encoder(x)
-		ruturn x.view(x.size(0), -1)
+		return x.view(x.size(0), -1)
 
 def euclidean_dist(x, y):
 	n = x.size(0)
@@ -170,7 +172,7 @@ def proto_loss(inputs, targets, num_support):
 
 	return loss_val, acc_val
 
-class ProtoNetLoss(Module):
+class ProtoNetLoss(nn.Module):
 	def __init__(self, num_support):
 		super(ProtoNetLoss, self).__init__()
 		self.num_support = num_support
@@ -186,8 +188,9 @@ def train(opt, tr_dataloader, model, criterion, optimizer, lr_scheduler):
 		print('===== epoch: {} ====='.format(epoch))
 		tr_iterator = iter(tr_dataloader)
 		model.train()
-		for x, y in tqdm(tr_iterator):
+		for batch in tr_iterator:
 			optimizer.zero_grad()
+			x, y = batch
 			x, y = x.to(device), y.to(device)
 			output = model(x)
 			loss, acc = criterion(output, y)
@@ -205,7 +208,8 @@ def test(opt, test_dataloader, model, criterion):
 	avg_acc = []
 	for epoch in range(10):
 		test_iterator = iter(test_dataloader)
-		for x, y in test_iterator:
+		for batch in test_iterator:
+			x, y = batch
 			x, y = x.to(device), y.to(device)
 			output = model(x)
 			_, acc = criterion(output, y)
@@ -220,7 +224,7 @@ if not os.path.exists(exp_root):
 
 model = ProtoNet().to(device)
 criterion = ProtoNetLoss(num_support_samples_tr)
-optimizer = optim.Adam(params.model.parameters(), lr=parser.learning_rate)
+optimizer = optim.Adam(params=model.parameters(), lr=parser.learning_rate)
 lr_scheduler = optim.lr_scheduler.StepLR(
 	optimizer=optimizer,
 	gamma=lr_scheduler_gamma,
