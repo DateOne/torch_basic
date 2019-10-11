@@ -90,7 +90,7 @@ class FSLBatchSampler(object):
 			sample_idcs = torch.randperm(self.dset_parameters['num_sample_per_class'])[0 : self.num_samples]
 			for sample_idx in sample_idcs:
 				batch.append(self.dset_parameters['num_sample_per_class'] * class_idx + sample_idx)
-		return iter(batch)
+		yield batch
 	def __len__(self):
 		return self.iterations
 
@@ -140,8 +140,8 @@ def euclidean_dist(x, y):
 	return torch.pow(x - y, 2).sum(2)
 
 def proto_loss(inputs, targets, num_support):
-	input_cpu = input.to('cpu')
-	target_cpu = target.to('cpu')
+	input_cpu = inputs.to('cpu')
+	target_cpu = targets.to('cpu')
 
 	classes = torch.unique(target_cpu)
 	num_classes = len(classes)
@@ -162,9 +162,9 @@ def proto_loss(inputs, targets, num_support):
 
 	log_p_y = F.log_softmax(-dists, dim=1).view(num_classes, num_query, -1)
 
-	target_inds = torch.arange(0, n_classes)
-	target_inds = target_inds.view(n_classes, 1, 1)
-	target_inds = target_inds.expand(n_classes, n_query, 1).long()
+	target_inds = torch.arange(0, num_classes)
+	target_inds = target_inds.view(num_classes, 1, 1)
+	target_inds = target_inds.expand(num_classes, num_query, 1).long()
 
 	loss_val = -log_p_y.gather(2, target_inds).squeeze().view(-1).mean()
 	_, y_hat = log_p_y.max(2)
@@ -177,7 +177,7 @@ class ProtoNetLoss(nn.Module):
 		super(ProtoNetLoss, self).__init__()
 		self.num_support = num_support
 	def forward(self, input, target):
-		return proto_loss(input, target, self.n_support)
+		return proto_loss(input, target, self.num_support)
 
 #train
 def train(opt, tr_dataloader, model, criterion, optimizer, lr_scheduler):
@@ -213,7 +213,7 @@ def test(opt, test_dataloader, model, criterion):
 			x, y = x.to(device), y.to(device)
 			output = model(x)
 			_, acc = criterion(output, y)
-			avg_acc.append(acc.item)
+			avg_acc.append(acc.item())
 	avg_acc = np.mean(avg_acc)
 	print('test acc: {}'.format(avg_acc))
 
