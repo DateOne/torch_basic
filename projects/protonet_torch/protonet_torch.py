@@ -218,19 +218,19 @@ def test(opt, test_dataloader, model, criterion):
 if not os.path.exists(exp_root):
 	os.makedirs(exp_root)
 
-	model = ProtoNet().to(device)
-	criterion = ProtoNetLoss(num_support_samples_tr)
-	optimizer = optim.Adam(params.model.parameters(), lr=parser.learning_rate)
-	lr_scheduler = optim.lr_scheduler.StepLR(
-		optimizer=optimizer,
-		gamma=lr_scheduler_gamma,
-		step_size=lr_scheduler_step)
+model = ProtoNet().to(device)
+criterion = ProtoNetLoss(num_support_samples_tr)
+optimizer = optim.Adam(params.model.parameters(), lr=parser.learning_rate)
+lr_scheduler = optim.lr_scheduler.StepLR(
+	optimizer=optimizer,
+	gamma=lr_scheduler_gamma,
+	step_size=lr_scheduler_step)
 
-	print('====================== start training ======================\n\n')
-	train(parser, bg_dataloader, model, criterion, optimizer, lr_scheduler)
+print('====================== start training ======================\n\n')
+train(parser, bg_dataloader, model, criterion, optimizer, lr_scheduler)
 
-	print('\n\n\n')
+print('\n\n\n')
 
-	print('====================== start testing ======================\n\n')
-	criterion = ProtoNetLoss(num_support_samples_val)
-	test(parser, eval_dataloader, model, criterion)
+print('====================== start testing ======================\n\n')
+criterion = ProtoNetLoss(num_support_samples_val)
+test(parser, eval_dataloader, model, criterion)
