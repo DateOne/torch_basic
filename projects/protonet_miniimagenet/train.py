@@ -106,7 +106,7 @@ if __name__ == '__main__':
 	tr_log['training_acc'] = []
 	tr_log['validation_loss'] = []
 	tr_log['validation_acc'] = []
-	tr_log['best_acc'] = []
+	tr_log['best_acc'] = 0
 
 	since = time.time()
 
@@ -134,7 +134,7 @@ if __name__ == '__main__':
 			pred = torch.argmax(logits, dim=1)
 			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()   #this is confusing
 
-			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch, i, len(train_loader), loss.item(), acc))
+			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch, i, len(training_dataloader), loss.item(), acc))
 
 			training_loss.add(loss.item())
 			training_acc.add(acc)
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 		validation_loss = Avenger()
 		validation_acc = Avenger()
 
-		for i, batch in enumerate(validation_loader, 1):
+		for i, batch in enumerate(validation_dataloader, 1):
 			data, _ = [_.cuda() for _ in batch]
 			p = args.shot * args.test_way
 			data_shot, data_query = data[:p], data[p:]
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 		validation_loss = validation_loss.item()
 		validation_acc = validation_acc.item()
 
-		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ===\n\n'.format(epoch, vl, va))
+		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ===\n\n'.format(epoch, validation_loss, validation_acc))
 
 		if validation_acc > tr_log['best_acc']:
 			tr_log['best_acc'] = validation_acc

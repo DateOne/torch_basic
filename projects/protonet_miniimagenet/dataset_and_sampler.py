@@ -17,7 +17,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 #root
-ROOT = '../../datasets'
+ROOT = '../../datasets/miniimagenet'
 
 #dataset
 class MiniImagenet(Dataset):
@@ -40,7 +40,7 @@ class MiniImagenet(Dataset):
 
 		for line in lines:
 			path, label_name = line.split(',')
-			path = os.path.join(ROOT, 'images', name)
+			path = os.path.join(ROOT, 'images', path)
 
 			if label_name not in self.label_names:
 				self.label_names.append(label_name)
@@ -87,17 +87,17 @@ class FSLBatchSampler():
 
 		for i in range(max(labels) + 1):
 			class_idcs = np.argwhere(labels == i).reshape(-1)
-			class_idcs = torch.from_numpy(clas_idcs)
-			self.classes_idcs.append(class_idcs)
+			class_idcs = torch.from_numpy(class_idcs)
+			self.classes_idx.append(class_idcs)
 
 	def __iter__(self):
 		for one_batch in range(self.num_batches):
 			batch = []
-			classes = torch.randperm(len(self.classes_idcs))[:self.num_classes]
+			classes = torch.randperm(len(self.classes_idx))[:self.num_classes]
 			for c in classes:
-				samples_idcs = self.classes_idcs[c]
+				samples_idcs = self.classes_idx[c]
 				idcs = torch.randperm(len(samples_idcs))[:self.num_samples]
-				batch.append(sample_idcs[idcs])
+				batch.append(samples_idcs[idcs])
 			batch = torch.stack(batch).t().reshape(-1)
 			yield batch
 
