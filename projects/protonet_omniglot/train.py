@@ -125,14 +125,16 @@ if __name__ == '__main__':
 		training_acc = Avenger()
 
 		for i, batch in enumerate(training_dataloader):
-			data, label = [_.cuda() for _ in batch]
+			data, _ = [_.cuda() for _ in batch]
 			p = args.shot * args.train_way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
 			protos = protos.reshape(args.shot, args.train_way, -1).mean(dim=0)
 
-			label = label.type(torch.cuda.LongTensor)
+			labels = torch.arange(args.train_way).repeat(args.query).type(torch.cuda.LongTensor)
+
+			#label = torch.arange(0, args.train_way).view(args.train_way, 1, 1).expand(args.train_way, args.query, 1).long()
 
 			logits = eucildean_distance(model(data_query), protos)
 			loss = F.cross_entropy(logits, label)
@@ -159,14 +161,16 @@ if __name__ == '__main__':
 		validation_acc = Avenger()
 
 		for i, batch in enumerate(validation_dataloader, 1):
-			data, label = [_.cuda() for _ in batch]
+			data, _ = [_.cuda() for _ in batch]
 			p = args.shots * args.validation_way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
 			protos = protos.reshape(args.shot, args.validation_way, -1).mean(dim=0)
 
-			label = label.type(torch.cuda.LongTensor)
+			label = torch.arange(args.validation_way).repeat(args.validation_query).type(torch.cuda.LongTensor)
+			
+			#label = torch.arange(0, args.validation_way).view(args.validation_way, 1, 1).expand(args.validation_way, args.validation_query, 1).long()
 
 			logits = eucildean_distance(model(data_query), protos)
 			loss = F.cross_entropy(logits, label)

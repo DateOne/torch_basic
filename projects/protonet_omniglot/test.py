@@ -63,7 +63,7 @@ if __name__ == '__main__':
 	test_acc = Avenger()
 
 	for i, batch in enumerate(dataloader, 1):
-		data, label = [_.cuda() for _ in batch]
+		data, _ = [_.cuda() for _ in batch]
 		p = args.way * args.shot
 		data_shot, data_query = data[:p], data[p:]
 
@@ -72,7 +72,9 @@ if __name__ == '__main__':
 
 		logits = euclidean_distance(model(data_query), protos)
 
-		label = label.type(torch.cuda.LongTensor)
+		label = torch.arange(args.way).repeat(args.args.query).type(torch.cuda.LongTensor)
+		
+		#label = torch.arange(0, args.way).view(args.way, 1, 1).expand(args.way, args.query, 1).long()
 
 	pred = torch.argmax(logits, dim=1)
 	acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
