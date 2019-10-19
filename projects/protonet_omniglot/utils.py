@@ -10,6 +10,13 @@
 #packages
 import os
 import pprint
+import torch
+import shutil
+from PIL import Image
+import numpy as np
+
+#image cache
+IMG_CACHE = {}
 
 #pprint
 _utils_pp = pprint.PrettyPrinter()
@@ -62,14 +69,14 @@ def euclidean_distance(a, b):
 #find items
 def find_items(root_dir, classes):
 	retour = []
-	rots = [os.sep + 'rot000', os.sep + 'rot090', os.sep + 'rot180', os.seq + 'rot270']
-	for (root, dirs, files) in os,walk(root_dir):
+	rots = [os.sep + 'rot000', os.sep + 'rot090', os.sep + 'rot180', os.sep + 'rot270']
+	for (root, dirs, files) in os.walk(root_dir):
 		for f in files:
 			r = root.split(os.sep)
 			label = r[-2] + os.sep + r[-1]
 			for rot in rots:
 				if label + rot in classes and (f.endswith('png')):
-					retour.append([(f, label, root, rot)])
+					retour.extend([(f, label, root, rot)])
 	return retour
 
 #index classes
@@ -81,7 +88,7 @@ def index_classes(items):
 	return idx
 
 #load image
-def load_image(path, index):
+def load_img(path, index):
 	path, rot = path.split(os.sep + 'rot')
 	if path in IMG_CACHE:
 		x = IMG_CACHE[path]

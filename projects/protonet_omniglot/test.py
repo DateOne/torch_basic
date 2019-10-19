@@ -72,7 +72,7 @@ if __name__ == '__main__':
 
 		logits = euclidean_distance(model(data_query), protos)
 
-		label = torch.arange(args.way).repeat(args.args.query).type(torch.cuda.LongTensor)
+		label = torch.arange(args.way).repeat(args.query).type(torch.cuda.LongTensor)
 		
 		#label = torch.arange(0, args.way).view(args.way, 1, 1).expand(args.way, args.query, 1).long()
 

@@ -19,9 +19,9 @@ from torch.utils.data import DataLoader
 
 import time
 
-from sampler import Omniglot
+from dataset_and_sampler import Omniglot, FSLBatchSampler
 from model import ProtoNet
-from utils import pprint, set_device, ensure_path, Avenger, eucildean_distance
+from utils import pprint, set_device, ensure_path, Avenger, euclidean_distance
 
 #main
 if __name__ == '__main__':
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 		default=5)
 	parser.add_argument(
 		'-qval', '--validation_query', type=int,
-		help'shiiiiiiiiit',
+		help='shiiiiiiiiit',
 		default=15)
 	parser.add_argument(
 		'-d', '--device',
@@ -132,11 +132,11 @@ if __name__ == '__main__':
 			protos = model(data_shot)
 			protos = protos.reshape(args.shot, args.train_way, -1).mean(dim=0)
 
-			labels = torch.arange(args.train_way).repeat(args.query).type(torch.cuda.LongTensor)
+			label = torch.arange(args.train_way).repeat(args.query).type(torch.cuda.LongTensor)
 
 			#label = torch.arange(0, args.train_way).view(args.train_way, 1, 1).expand(args.train_way, args.query, 1).long()
 
-			logits = eucildean_distance(model(data_query), protos)
+			logits = euclidean_distance(model(data_query), protos)
 			loss = F.cross_entropy(logits, label)
 			pred = torch.argmax(logits, dim=1)
 			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
@@ -162,7 +162,7 @@ if __name__ == '__main__':
 
 		for i, batch in enumerate(validation_dataloader, 1):
 			data, _ = [_.cuda() for _ in batch]
-			p = args.shots * args.validation_way
+			p = args.shot * args.validation_way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
@@ -172,7 +172,7 @@ if __name__ == '__main__':
 			
 			#label = torch.arange(0, args.validation_way).view(args.validation_way, 1, 1).expand(args.validation_way, args.validation_query, 1).long()
 
-			logits = eucildean_distance(model(data_query), protos)
+			logits = euclidean_distance(model(data_query), protos)
 			loss = F.cross_entropy(logits, label)
 			pred = torch.argmax(logits, dim=1)
 			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
