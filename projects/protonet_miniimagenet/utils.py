@@ -53,9 +53,12 @@ class Avenger():
 
 #euclidean distance
 def euclidean_distance(a, b):
-	n = a.shape[0]
-	m = b.shape[0]
+	n = a.shape[0]   #number of queries
+	m = b.shape[0]   #training_way
+	
 	a = a.unsqueeze(1).expand(n, m, -1)
 	b = b.unsqueeze(0).expand(n, m, -1)
-	logits = -((a - b) ** 2).sum(dim=2)
+	
+	logits = -((a - b) ** 2).sum(dim=2)   #number of queries times training way with each element being their distance
+	
 	return logits

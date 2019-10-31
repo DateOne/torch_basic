@@ -21,81 +21,151 @@ import time
 
 from dataset_and_sampler import MiniImagenet, FSLBatchSampler
 from model import ProtoNet
-from utils import pprint, set_device, ensure_path, Avenger, euclidean_distance
+from utils import pprint, set_device, ensure_path, Avenger
+from utils import euclidean_distance
 
 #main
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser('protonet auguments, train')
+	
+	parser = argparse.ArgumentParser('DeepOne training arguments')   #these parameters need some big change!!!
+	'''
+	arguments:
+		number of epochs
+		number of batches
+		learning rate
+		learning rate scheduler gamma
+		learning rate scheduler step size
+		number of ways for meta-tasks in training
+		number of shots for meta-tasks in training
+		number of query samples for meta-tasks in training
+		number of ways for meta-tasks in validation
+		device information
+		save root information (not the dataset root) 
+	'''
 	parser.add_argument(
-		'-e', '--epochs',type=int,
-		help='a fixed point of time',
+		'-e', '--epoch', type=int,
+		help='number of epochs',
 		default=200)
 	parser.add_argument(
-		'-i', '--iterations', type=int,
-		help='repetition of a process',
+		'-tr_b', '--training_batch', type=int,
+		help='number of batches',
 		default=100)
 	parser.add_argument(
-		'-lr', '--learning_rate', type=float,
-		help='measure people learning speed',
+		'-val_b', '--validation_batch', type=int,
+		help='number of validation batches',
+		default=400)
+	parser.add_argument(
+		'-t_b', '--testing_batch', type=int,
+		help='number of batchs in testing',
+		default=2000)
+	parser.add_argument(
+		'-lr', '--learning_rate', type=int,
+		help='learning rate',
 		default=0.001)
 	parser.add_argument(
-		'-wtr', '--train_way', type=int,
-		help='chuang wei, name of a restaurant',
+		'-lr_g', '--learning_rate_gamma', type=float,
+		help='learning rate gamma',
+		default=0.5)
+	parser.add_argument(
+		'-lr_s', '--learning_rate_step', type=int,
+		help='learning rate step size',
+		default=20)
+	parser.add_argument(
+		'-tr_w', '--training_way', type=int,
+		help='number of ways for meta-tasks in training',
 		default=30)
 	parser.add_argument(
-		'-wte', '--test_way', type=int,
-		help='brother of chuang wei',
+		'-w', '--way', type=int,
+		help='number of ways for meta-tasks',
 		default=5)
 	parser.add_argument(
 		'-s', '--shot', type=int,
-		help='an action of shooting',
+		help='number of shots for meta-tasks',
 		default=1)
 	parser.add_argument(
 		'-q', '--query', type=int,
-		help='a question in mind',
+		help='number of query samples for meta-tasks',
 		default=15)
 	parser.add_argument(
+		'-t_q', '--testing_query', type=int,
+		help='number of query samples for meta-tasks in testing',
+		default=30)
+	parser.add_argument(
 		'-d', '--device',
-		help='a scheme to deceive',
+		help='device information',
 		default='0')
 	parser.add_argument(
 		'-sv_r', '--save_root',
-		help='to protect the tree',
+		help='save root information (not the dataset root)',
 		default='save')
+	parser.add_argument(
+		'-sd', '--manual_seed',
+		help='manual seed to guarantee each batch in validation sampler and testing sampler will be same',
+		default=111)
+	
 	args = parser.parse_args()
+
 	pprint(vars(args))
+
+	#dataloader
+	def init_dataset(mode):
+		'''
+		description:
+			initiate miniimagenet dataset
+		'''
+		return MiniImagenet(mode)
+
+	def init_dataloader(mode):
+		'''
+		description:
+			initiate dataloaders
+		'''
+		dataset = init_dataset(mode)
+
+		if mode == 'train':
+			num_batches = args.training_batch
+			num_classes = args.training_way
+			num_samples = args.shot + args.query
+
+		elif mode == 'val':
+			num_batches = args.validation_batch
+			num_classes = args.way
+			num_samples = args.shot + args.query
+
+		else:
+			num_batches = args.testing_batch
+			num_classes = args.way
+			num_samples = args.shot + args.testing_query
+
+		batch_sampler = MiniImagenetBatchSampler(
+			dataset.labels,
+			num_batches=num_batches,
+			num_classes=num_classes,
+			num_samples=num_samples)
+
+		dataloader = DataLoader(
+			dataset=dataset,
+			batch_sampler=batch_sampler,
+			num_workers=8,
+			pin_memory=True)
+
+		print('{} set ready'.format(mode))
+		
+		return dataloader
 
 	set_device(args.device)
 	ensure_path(args.save_root)
 
-	training_dataset = MiniImagenet('train')
-	training_sampler = FSLBatchSampler(
-		training_dataset.labels,
-		num_batches=args.iterations,
-		num_classes=args.train_way,
-		num_samples=args.shot + args.query)
-	training_dataloader = DataLoader(
-		dataset=training_dataset,
-		batch_sampler=training_sampler,
-		num_workers=8,
-		pin_memory=True)
-
-	validation_dataset = MiniImagenet('val')
-	validation_sampler = FSLBatchSampler(
-		validation_dataset.labels,
-		num_batches=400,
-		num_classes=args.test_way,
-		num_samples=args.shot + args.query)
-	validation_dataloader = DataLoader(
-		dataset=validation_dataset,
-		batch_sampler=validation_sampler,
-		num_workers=8,
-		pin_memory=True)
-
+	training_dataloader = init_dataloader('train')
+	validation_dataloader = init_dataloader('val')
+	
 	model = ProtoNet().cuda()
 
 	optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-	lr_scheduler = optim.lr_scheduler.StepLR(optimizer, gamma=0.5, step_size=20)
+	lr_scheduler = optim.lr_scheduler.StepLR(
+		optimizer,
+		gamma=args.learning_rate_gamma,
+		step_size = args.learning_rate_step)
 
 	def save_model(name):
 		torch.save(model.state_dict(), os.path.join(args.save_root, name + '.pth'))
@@ -119,22 +189,23 @@ if __name__ == '__main__':
 		training_acc = Avenger()
 
 		for i, batch in enumerate(training_dataloader):
-			data, _ = [_.cuda() for _ in batch]   #this is very confusing
-			p = args.shot * args.train_way
+			data, _ = [_.cuda() for _ in batch]   #data will be like (class1, sample1), (class2, sample1), ... (classn, sample1), (class1, sample2), ... (classn, samplen)
+			p = args.shot * args.training_way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
-			protos = protos.reshape(args.shot, args.train_way, -1).mean(dim=0)
+			protos = protos.reshape(args.shot, args.training_way, -1).mean(dim=0)   #think of that as a length-training_way Tensor with each element being the proto of its class
 
-			label = torch.arange(args.train_way).repeat(args.query)   #this is confusing
+			logits = euclidean_distance(model(data_query), protos)   #two-dimensional Tensor (number of queries times training way) with each element being distance, the arangement of queries see data
+
+			label = torch.arange(args.training_way).repeat(args.query)
 			label = label.type(torch.cuda.LongTensor)
 
-			logits = euclidean_distance(model(data_query), protos)
-			loss = F.cross_entropy(logits, label)
+			loss = F.cross_entropy(logits, label)   #that makes sense
 			pred = torch.argmax(logits, dim=1)
-			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()   #this is confusing
+			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
 
-			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch, i, len(training_dataloader), loss.item(), acc))
+			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch + 1, i + 1, len(training_dataloader), loss.item(), acc))
 
 			training_loss.add(loss.item())
 			training_acc.add(acc)
@@ -151,18 +222,19 @@ if __name__ == '__main__':
 		validation_loss = Avenger()
 		validation_acc = Avenger()
 
-		for i, batch in enumerate(validation_dataloader, 1):
+		for i, batch in enumerate(validation_dataloader):
 			data, _ = [_.cuda() for _ in batch]
-			p = args.shot * args.test_way
+			p = args.shot * args.way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
-			protos = protos.reshape(args.shot, args.test_way, -1).mean(dim=0)
-
-			label = torch.arange(args.test_way).repeat(args.query)
-			label = label.type(torch.cuda.LongTensor)
+			protos = protos.reshape(args.shot, args.way, -1).mean(dim=0)
 
 			logits = euclidean_distance(model(data_query), protos)
+
+			label = torch.arange(args.way).repeat(args.query)
+			label = label.type(torch.cuda.LongTensor)
+
 			loss = F.cross_entropy(logits, label)
 			pred = torch.argmax(logits, dim=1)
 			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
@@ -173,7 +245,7 @@ if __name__ == '__main__':
 		validation_loss = validation_loss.item()
 		validation_acc = validation_acc.item()
 
-		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ===\n\n'.format(epoch, validation_loss, validation_acc))
+		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ==='.format(epoch + 1, validation_loss, validation_acc))
 
 		if validation_acc > tr_log['best_acc']:
 			tr_log['best_acc'] = validation_acc
@@ -192,4 +264,4 @@ if __name__ == '__main__':
 			save_model('epoch-{}'.format(epoch))
 
 		time_elapsed = time.time() - since
-		print('\n\n===========================\ntraining complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+		print('training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
