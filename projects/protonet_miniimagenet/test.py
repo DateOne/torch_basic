@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 
 from utils import pprint, set_device, Avenger
 from utils import euclidean_distance
-from dataset_and_sampler import MiniImagenet, FSLBatchSampler
+from dataset_and_sampler import MiniImagenet, MiniImagenetBatchSampler
 from model import ProtoNet
 
 #main
@@ -43,7 +43,7 @@ if __name__ == '__main__':
 		help='device information',
 		default='0')
 	
-	args.parser.parse_args()
+	args = parser.parse_args()
 	
 	pprint(vars(args))
 
@@ -51,7 +51,7 @@ if __name__ == '__main__':
 	set_device(args.device)
 
 	dataset = MiniImagenet('test')
-	sampler = FSLBatchSampler(
+	sampler = MiniImagenetBatchSampler(
 		dataset.labels,
 		num_batches=args.testing_batch,
 		num_classes=args.way,
@@ -80,7 +80,7 @@ if __name__ == '__main__':
 
 		logits = euclidean_distance(model(data_query), protos)
 
-		label = torch.arange(args.way).repeat(args.query)
+		label = torch.arange(args.way).repeat(args.testing_query)
 		label = label.type(torch.cuda.LongTensor)
 	
 		pred = torch.argmax(logits, dim=1)
