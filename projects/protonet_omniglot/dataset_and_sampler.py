@@ -22,7 +22,7 @@ from torchvision import transforms
 from utils import find_items, index_classes, load_img
 
 #root
-ROOT = '../../datasets/new_omniglot'
+ROOT = '../datasets/new_omniglot'
 raw_folder = 'raw'
 processed_folder = 'data'
 
@@ -59,7 +59,7 @@ class Omniglot(Dataset):
 
 
 #sampler
-class FSLBatchSampler():
+class OmniglotBatchSampler():
 	'''
 	torch batch sampler for few shot learning
 	methods:
@@ -73,22 +73,26 @@ class FSLBatchSampler():
 		self.num_samples = num_samples
 
 		labels = np.array(labels)
-		self.classes_idx = []
+		
+		self.class_class = []
 
 		for i in range(max(labels) + 1):
-			class_idcs = np.argwhere(labels == i).reshape(-1)
-			class_idcs = torch.from_numpy(class_idcs)
-			self.classes_idx.append(class_idcs)
+			class_i = np.argwhere(labels == i).reshape(-1)
+			class_i = torch.from_numpy(class_i)
+			self.classes_class.append(class_i)
 
 	def __iter__(self):
-		for one_batch in range(self.num_batches):
+		for b in range(self.num_batches):
 			batch = []
-			classes = torch.randperm(len(self.classes_idx))[:self.num_classes]
+			classes = torch.randperm(len(self.classes_class))[:self.num_classes]
+			
 			for c in classes:
-				samples_idcs = self.classes_idx[c]
-				idcs = torch.randperm(len(samples_idcs))[:self.num_samples]
-				batch.append(samples_idcs[idcs])
+				the_class = self.class_class[c]
+				samples_in_class = torch.randperm(len(the_class))[:self.num_samples]
+				batch.append(the_class[samples_in_class])
+
 			batch = torch.stack(batch).t().reshape(-1)
+			
 			yield batch
 
 	def __len__(self):

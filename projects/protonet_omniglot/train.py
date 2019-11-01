@@ -19,64 +19,75 @@ from torch.utils.data import DataLoader
 
 import time
 
-from dataset_and_sampler import Omniglot, FSLBatchSampler
+from dataset_and_sampler import Omniglot, OmniglotBatchSampler
 from model import ProtoNet
 from utils import pprint, set_device, ensure_path, Avenger, euclidean_distance
 
 #main
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser('protonet auguments, train')
+	parser = argparse.ArgumentParser('omniglot dataset, protonet, training')
 	parser.add_argument(
 		'-e', '--epochs',type=int,
-		help='a fixed point of time',
+		help='number of epochs',
 		default=100)
 	parser.add_argument(
-		'-i', '--iterations', type=int,
-		help='repetition of a process',
+		'-b', '--batch', type=int,
+		help='number of batches',
 		default=100)
 	parser.add_argument(
 		'-lr', '--learning_rate', type=float,
-		help='measure people learning speed',
+		help='learning rate',
 		default=0.001)
 	parser.add_argument(
-		'-wtr', '--train_way', type=int,
-		help='chuang wei, name of a restaurant',
+		'-lr_g', '-learning_rate_gamma', type=float,
+		help='learning rate gamma',
+		default=0.5)
+	parser.add_argument(
+		'-lr_s', '--learning_rate_step', type=int,
+		help='learning rate step size',
+		default=20)
+	parser.add_argument(
+		'-tr_w', '--training_way', type=int,
+		help='number of ways for meta-tasks in training',
 		default=60)
 	parser.add_argument(
+		'-w', '--way', type=int,
+		help='number of ways for meta-tasks',
+		default=5)
+	parser.add_argument(
 		'-s', '--shot', type=int,
-		help='an action of shooting',
+		help='number of shots for meta-tasks',
 		default=5)
 	parser.add_argument(
 		'-q', '--query', type=int,
-		help='a question in mind',
+		help='number of query samples for meta-tasks',
 		default=5)
 	parser.add_argument(
-		'-wval', '--validation_way', type=int,
-		help='oh yeah!!!',
-		default=5)
-	parser.add_argument(
-		'-qval', '--validation_query', type=int,
-		help='shiiiiiiiiit',
+		'-t_val_q', '--testing_validation_query', type=int,
+		help='number of query samples for meta-tasks in validation and testing',
 		default=15)
 	parser.add_argument(
 		'-d', '--device',
-		help='a scheme to deceive',
+		help='device information',
 		default='0')
 	parser.add_argument(
 		'-sv_r', '--save_root',
-		help='to protect the tree',
+		help='save root information (not the dataset root)',
 		default='save')
+	
 	args = parser.parse_args()
 	pprint(vars(args))
 
 	set_device(args.device)
 	ensure_path(args.save_root)
+	ensure_path(os.path.join(args.save_root, 'models'))
+	ensure_path(os.path.join(args.save_root, 'grads'))
 
 	training_dataset = Omniglot('train')
-	training_sampler = FSLBatchSampler(
+	training_sampler = OmniglotBatchSampler(
 		training_dataset.labels,
-		num_batches=args.iterations,
-		num_classes=args.train_way,
+		num_batches=args.batch,
+		num_classes=args.training_way,
 		num_samples=args.shot + args.query)
 	training_dataloader = DataLoader(
 		dataset=training_dataset,
@@ -85,11 +96,11 @@ if __name__ == '__main__':
 		pin_memory=True)
 
 	validation_dataset = Omniglot('val')
-	validation_sampler = FSLBatchSampler(
+	validation_sampler = OmniglotBatchSampler(
 		validation_dataset.labels,
-		num_batches=args.iterations,
-		num_classes=args.validation_way,
-		num_samples=args.shot + args.validation_query)
+		num_batches=args.batch,
+		num_classes=args.way,
+		num_samples=args.shot + args.testing_validation_query)
 	validation_dataloader = DataLoader(
 		dataset=validation_dataset,
 		batch_sampler=validation_sampler,
@@ -102,7 +113,10 @@ if __name__ == '__main__':
 	lr_scheduler = optim.lr_scheduler.StepLR(optimizer, gamma=0.5, step_size=20)
 
 	def save_model(name):
-		torch.save(model.state_dict(), os.path.join(args.save_root, name + '.pth'))
+		if name == 'best' or 'last':
+			torch.save(model.state_dict(), os.path.join(args.save_root, name + '.pth'))
+		else:
+			torch.save(model.state_dict(), os.path.join(args.save_root, 'models', name + '.pth'))
 
 	tr_log = {}
 	tr_log['args'] = vars(args)
@@ -119,20 +133,18 @@ if __name__ == '__main__':
 
 		model.train()
 
-		print('===== training =====')
-
 		training_loss = Avenger()
 		training_acc = Avenger()
 
 		for i, batch in enumerate(training_dataloader):
 			data, _ = [_.cuda() for _ in batch]
-			p = args.shot * args.train_way
+			p = args.shot * args.training_way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
-			protos = protos.reshape(args.shot, args.train_way, -1).mean(dim=0)
+			protos = protos.reshape(args.shot, args.training_way, -1).mean(dim=0)
 
-			label = torch.arange(args.train_way).repeat(args.query).type(torch.cuda.LongTensor)
+			label = torch.arange(args.training_way).repeat(args.query).type(torch.cuda.LongTensor)
 
 			#label = torch.arange(0, args.train_way).view(args.train_way, 1, 1).expand(args.train_way, args.query, 1).long()
 
@@ -141,7 +153,7 @@ if __name__ == '__main__':
 			pred = torch.argmax(logits, dim=1)
 			acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
 
-			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch, i, len(training_dataloader), loss.item(), acc))
+			print('=== epoch: {}, train: {}/{}, loss={:.4f} acc={:.4f} ==='.format(epoch + 1, i + 1, len(training_dataloader), loss.item(), acc))
 
 			training_loss.add(loss.item())
 			training_acc.add(acc)
@@ -155,20 +167,18 @@ if __name__ == '__main__':
 
 		model.eval()
 
-		print('\n===== validation =====')
-
 		validation_loss = Avenger()
 		validation_acc = Avenger()
 
-		for i, batch in enumerate(validation_dataloader, 1):
+		for i, batch in enumerate(validation_dataloader):
 			data, _ = [_.cuda() for _ in batch]
-			p = args.shot * args.validation_way
+			p = args.shot * args.way
 			data_shot, data_query = data[:p], data[p:]
 
 			protos = model(data_shot)
-			protos = protos.reshape(args.shot, args.validation_way, -1).mean(dim=0)
+			protos = protos.reshape(args.shot, args.way, -1).mean(dim=0)
 
-			label = torch.arange(args.validation_way).repeat(args.validation_query).type(torch.cuda.LongTensor)
+			label = torch.arange(args.way).repeat(args.testing_validation_query).type(torch.cuda.LongTensor)
 			
 			#label = torch.arange(0, args.validation_way).view(args.validation_way, 1, 1).expand(args.validation_way, args.validation_query, 1).long()
 
@@ -183,7 +193,7 @@ if __name__ == '__main__':
 		validation_loss = validation_loss.item()
 		validation_acc = validation_acc.item()
 
-		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ===\n\n'.format(epoch, validation_loss, validation_acc))
+		print('=== epoch {}, val, loss={:.4f} acc={:.4f} ==='.format(epoch, validation_loss, validation_acc))
 
 		if validation_acc > tr_log['best_acc']:
 			tr_log['best_acc'] = validation_acc
@@ -202,4 +212,4 @@ if __name__ == '__main__':
 			save_model('epoch-{}'.format(epoch))
 
 		time_elapsed = time.time() - since
-		print('\n' + '=' * 30 + '\n' + 'trainging complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60) + '\n' + '=' * 30 + '\n\n')
+		print('trainging complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))

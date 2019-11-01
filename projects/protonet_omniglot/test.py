@@ -19,9 +19,10 @@ from model import ProtoNet
 
 #main
 if __name__ == '__main__':
-	parser = argparse.ArgumentParser('protonet arguments, test')
+	parser = argparse.ArgumentParser('omniglot dataset, protonet, testing')
+	
 	parser.add_argument(
-		'-i', '--iterations', type=int,
+		'-i', '--batch', type=int,
 		default=100)
 	parser.add_argument(
 		'-w', '--way', type=int,
@@ -30,7 +31,7 @@ if __name__ == '__main__':
 		'-s', '--shot', type=int,
 		default=5)
 	parser.add_argument(
-		'-q', '--query', type=int,
+		'-q', '--testing_validation_query', type=int,
 		default=15)
 	parser.add_argument(
 		'-d', '--device',
@@ -44,9 +45,9 @@ if __name__ == '__main__':
 	dataset = Omniglot('test')
 	sampler = FSLBatchSampler(
 		dataset.labels,
-		num_batches=args.iterations,
+		num_batches=args.batch,
 		num_classes=args.way,
-		num_samples=args.shot + args.query)
+		num_samples=args.shot + args.testing_validation_query)
 	dataloader = DataLoader(
 		dataset,
 		batch_sampler=sampler,
@@ -58,11 +59,9 @@ if __name__ == '__main__':
 
 	model.eval()
 
-	print('===== test =====')
-
 	test_acc = Avenger()
 
-	for i, batch in enumerate(dataloader, 1):
+	for i, batch in enumerate(dataloader):
 		data, _ = [_.cuda() for _ in batch]
 		p = args.way * args.shot
 		data_shot, data_query = data[:p], data[p:]
@@ -72,12 +71,12 @@ if __name__ == '__main__':
 
 		logits = euclidean_distance(model(data_query), protos)
 
-		label = torch.arange(args.way).repeat(args.query).type(torch.cuda.LongTensor)
+		label = torch.arange(args.way).repeat(args.testing_validation_query).type(torch.cuda.LongTensor)
 		
 		#label = torch.arange(0, args.way).view(args.way, 1, 1).expand(args.way, args.query, 1).long()
 
-	pred = torch.argmax(logits, dim=1)
-	acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
-	test_acc.add(acc)
+		pred = torch.argmax(logits, dim=1)
+		acc = (pred == label).type(torch.cuda.FloatTensor).mean().item()
+		test_acc.add(acc)
 
-	print('=== batch {}: {:.2f}({:.2f}) ==='.format(i, test_acc.item() * 100, acc * 100))
+		print('=== batch {}: {:.2f}({:.2f}) ==='.format(i, test_acc.item() * 100, acc * 100))
