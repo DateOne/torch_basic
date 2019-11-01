@@ -19,7 +19,7 @@ from torch.utils.data import DataLoader
 
 import time
 
-from dataset_and_sampler import MiniImagenet, FSLBatchSampler
+from dataset_and_sampler import MiniImagenet, MiniImagenetBatchSampler
 from model import ProtoNet
 from utils import pprint, set_device, ensure_path, Avenger
 from utils import euclidean_distance
@@ -180,7 +180,7 @@ if __name__ == '__main__':
 
 	since = time.time()
 
-	for epoch in range(args.epochs):
+	for epoch in range(args.epoch):
 		lr_scheduler.step()
 
 		model.train()

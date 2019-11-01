@@ -17,7 +17,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 
 #root
-ROOT = '../datasets/miniimagenet'
+ROOT = '../../datasets/miniimagenet'
 
 #dataset
 class MiniImagenet(Dataset):
@@ -29,7 +29,7 @@ class MiniImagenet(Dataset):
 		get image and label pair, get length
 	'''
 	def __init__(self, mode):
-		csv_path = os.path.join(root, mode + '.csv')
+		csv_path = os.path.join(ROOT, mode + '.csv')
 		lines = [x.strip() for x in open(csv_path, 'r').readlines()][1:]   #one dimensional list with each element being data path and label name
 
 		self.data_paths = []   #to store data paths
@@ -40,7 +40,7 @@ class MiniImagenet(Dataset):
 
 		for line in lines:
 			data_path, label_name = line.split(',')
-			data_path = os.path.join(root, 'images', data_path)
+			data_path = os.path.join(ROOT, 'images', data_path)
 
 			if label_name not in self.label_names:
 				self.label_names.append(label_name)
