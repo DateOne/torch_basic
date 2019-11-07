@@ -3,7 +3,7 @@
 #                                  author: yi                                  #
 #                     Prototypical Networks for Few-Shot Learning              #
 #                              dataset: omniglot                               #
-#                                   19, Oct 9                                   #
+#                                   19, Oct 9                                  #
 #==============================================================================#
 
 #packages
