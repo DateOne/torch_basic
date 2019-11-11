@@ -5,7 +5,7 @@
 import torch
 import torchvision
 import torch.nn as nn
-import torch.transforms as transforms
+import torchvision.transforms as transforms
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -22,7 +22,7 @@ transform = transforms.Compose([
 train_dataset = torchvision.datasets.CIFAR10(
 	root='../../data/',
 	train=True, 
-	ransform=transform,
+	transform=transform,
 	download=True)
 test_dataset = torchvision.datasets.CIFAR10(
 	root='../../data/',
