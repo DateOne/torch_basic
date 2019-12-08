@@ -22,7 +22,7 @@ from torchvision import transforms
 from utils import find_items, index_classes, load_img
 
 #root
-ROOT = '../datasets/new_omniglot'
+ROOT = '../../omniglot'
 raw_folder = 'raw'
 processed_folder = 'data'
 
@@ -79,12 +79,12 @@ class OmniglotBatchSampler():
 		for i in range(max(labels) + 1):
 			class_i = np.argwhere(labels == i).reshape(-1)
 			class_i = torch.from_numpy(class_i)
-			self.classes_class.append(class_i)
+			self.class_class.append(class_i)
 
 	def __iter__(self):
 		for b in range(self.num_batches):
 			batch = []
-			classes = torch.randperm(len(self.classes_class))[:self.num_classes]
+			classes = torch.randperm(len(self.class_class))[:self.num_classes]
 			
 			for c in classes:
 				the_class = self.class_class[c]
